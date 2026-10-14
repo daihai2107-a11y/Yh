@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHN Express - Cổng Shop & Admin (Cloud Realtime)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { ghn: { orange: '#FA5400', dark: '#002D62', hover: '#D94800' } }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <header class="bg-gray-900 text-white sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-2.5 flex justify-between items-center">
+            <span class="font-extrabold text-ghn-orange text-lg">GHN CLOUD PORTAL</span>
+            <div class="space-x-2">
+                <button onclick="switchTab('shop')" id="btn-shop" class="px-3 py-1.5 rounded-lg font-bold text-sm bg-ghn-orange text-white">Shop</button>
+                <button onclick="switchTab('admin')" id="btn-admin" class="px-3 py-1.5 rounded-lg font-bold text-sm bg-gray-800 text-gray-300">Admin</button>
+                <a href="tracking.html" target="_blank" class="px-3 py-1.5 rounded-lg font-bold text-sm bg-blue-600 text-white inline-block">Tra cứu <i class="fa-solid fa-external-link-alt ml-1"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <!-- CỔNG SHOP -->
+    <div id="tab-shop" class="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+        <div class="bg-white p-6 rounded-2xl shadow space-y-4">
+            <h2 class="text-xl font-bold text-ghn-dark border-b pb-2">Tạo Đơn Hàng Mới Lên Đám Mây</h2>
+            <form onsubmit="createOrder(event)" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label class="block text-sm font-semibold mb-1">Tên Chủ Shop</label><input type="text" id="shop-name" required class="w-full px-4 py-2.5 border rounded-xl outline-none" placeholder="Shop Quần Áo A"></div>
+                    <div><label class="block text-sm font-semibold mb-1">Tên Người Nhận</label><input type="text" id="rec-name" required class="w-full px-4 py-2.5 border rounded-xl outline-none" placeholder="Nguyễn Văn B"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label class="block text-sm font-semibold mb-1">SĐT Người Nhận</label><input type="tel" id="rec-phone" required class="w-full px-4 py-2.5 border rounded-xl outline-none" placeholder="0987654321"></div>
+                    <div><label class="block text-sm font-semibold mb-1">Tiền COD (VNĐ)</label><input type="number" id="order-cod" value="150000" required class="w-full px-4 py-2.5 border rounded-xl outline-none"></div>
+                </div>
+                <div><label class="block text-sm font-semibold mb-1">Địa chỉ giao hàng</label><input type="text" id="rec-address" required class="w-full px-4 py-2.5 border rounded-xl outline-none" placeholder="Số 10 Đại Cồ Việt, Hà Nội"></div>
+                <button type="submit" id="btn-create" class="w-full bg-ghn-orange text-white py-3 rounded-xl font-bold shadow hover:bg-ghn-hover transition">ĐẨY ĐƠN LÊN ĐÁM MÂY NGAY</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- CỔNG ADMIN -->
+    <div id="tab-admin" class="max-w-6xl mx-auto p-4 md:p-6 space-y-6 hidden">
+        <div class="bg-white p-6 rounded-2xl shadow space-y-4">
+            <div class="flex justify-between items-center"><h2 class="text-xl font-bold text-ghn-dark">Quản Lý & Cập Nhật Đơn Hàng</h2><button onclick="loadOrders()" class="bg-gray-200 px-3 py-1.5 rounded-xl text-sm font-bold"><i class="fa-solid fa-rotate"></i> Làm mới</button></div>
+            <div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="bg-gray-50 border-b text-xs text-gray-500 uppercase"><th class="p-3">Mã Vận Đơn</th><th class="p-3">Shop</th><th class="p-3">Người Nhận</th><th class="p-3">COD</th><th class="p-3">Trạng thái & Vị trí</th><th class="p-3 text-center">Hành động</th></tr></thead><tbody id="admin-tbody" class="text-sm divide-y"></tbody></table></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://api.npoint.io/39e85da087cd860d55a7';
+
+        function switchTab(tab) {
+            document.getElementById('tab-shop').classList.toggle('hidden', tab !== 'shop');
+            document.getElementById('tab-admin').classList.toggle('hidden', tab !== 'admin');
+            document.getElementById('btn-shop').className = tab === 'shop' ? 'px-3 py-1.5 rounded-lg font-bold text-sm bg-ghn-orange text-white' : 'px-3 py-1.5 rounded-lg font-bold text-sm bg-gray-800 text-gray-300';
+            document.getElementById('btn-admin').className = tab === 'admin' ? 'px-3 py-1.5 rounded-lg font-bold text-sm bg-ghn-orange text-white' : 'px-3 py-1.5 rounded-lg font-bold text-sm bg-gray-800 text-gray-300';
+            if(tab === 'admin') loadOrders();
+        }
+
+        async function createOrder(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-create');
+            btn.innerText = 'Đang đồng bộ Cloud...';
+
+            let orders = [];
+            try {
+                const res = await fetch(API_URL);
+                if(res.ok) orders = await res.json();
+            } catch(err) {}
+
+            const newOrder = {
+                id: 'GHN' + Math.floor(100000 + Math.random() * 900000),
+                shopName: document.getElementById('shop-name').value,
+                receiverName: document.getElementById('rec-name').value,
+                receiverPhone: document.getElementById('rec-phone').value,
+                receiverAddress: document.getElementById('rec-address').value,
+                cod: Number(document.getElementById('order-cod').value),
+                status: 'Chờ lấy hàng',
+                location: 'Đã tạo đơn hàng thành công, chờ bưu tá qua lấy',
+                timestamp: new Date().toLocaleString('vi-VN')
+            };
+
+            orders.unshift(newOrder);
+
+            await fetch(API_URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orders)
+            });
+
+            btn.innerText = 'ĐẨY ĐƠN LÊN ĐÁM MÂY NGAY';
+            alert(`Tạo đơn thành công! Mã vận đơn của bạn là: ${newOrder.id}`);
+            e.target.reset();
+        }
+
+        async function loadOrders() {
+            try {
+                const res = await fetch(API_URL);
+                const orders = await res.json();
+                document.getElementById('admin-tbody').innerHTML = orders.map(o => `
+                    <tr class="border-b">
+                        <td class="p-3 font-bold text-ghn-orange">${o.id}</td>
+                        <td class="p-3">${o.shopName}</td>
+                        <td class="p-3"><b>${o.receiverName}</b><br>${o.receiverAddress}</td>
+                        <td class="p-3 font-bold">${o.cod.toLocaleString()} đ</td>
+                        <td class="p-3"><span class="px-2.5 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 font-bold">${o.status}</span><br><span class="text-xs text-gray-500 mt-1 block">${o.location}</span></td>
+                        <td class="p-3 text-center space-x-1">
+                            <button onclick="updateStatus('${o.id}', 'Đang giao', 'Đang vận chuyển qua kho tổng')" class="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg font-bold">Đang giao</button>
+                            <button onclick="updateStatus('${o.id}', 'Giao thành công', 'Đã giao hàng và thu tiền COD')" class="bg-green-500 hover:bg-green-600 text-white text-xs px-2.5 py-1.5 rounded-lg font-bold">Thành công</button>
+                        </td>
+                    </tr>
+                `).join('') || `<tr><td colspan="6" class="p-4 text-center text-gray-400">Chưa có đơn hàng</td></tr>`;
+            } catch(err) { alert('Lỗi tải dữ liệu Cloud!'); }
+        }
+
+        async function updateStatus(id, status, location) {
+            const res = await fetch(API_URL);
+            let orders = await res.json();
+            const idx = orders.findIndex(o => o.id === id);
+            if(idx !== -1) {
+                orders[idx].status = status;
+                orders[idx].location = location;
+                orders[idx].timestamp = new Date().toLocaleString('vi-VN');
+                await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orders)
+                });
+                loadOrders();
+            }
+        }
+    </script>
+</body>
+</html>
